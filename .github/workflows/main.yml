@@ -1,0 +1,37 @@
+name: Update MaxMind Database
+
+on:
+  schedule:
+    - cron: "0 0 */7 * *"
+  workflow_dispatch:
+
+jobs:
+  update-maxmind:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Download and Extract MaxMind Database
+        run: |
+          wget "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${{ secrets.MAXMIND_LICENSE_KEY }}&suffix=tar.gz" -O GeoLite2-ASN.tar.gz
+          wget "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${{ secrets.MAXMIND_LICENSE_KEY }}&suffix=tar.gz.sha256" -O GeoLite2-ASN-sha256.txt
+          wget "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${{ secrets.MAXMIND_LICENSE_KEY }}&suffix=tar.gz" -O GeoLite2-City.tar.gz
+          wget "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${{ secrets.MAXMIND_LICENSE_KEY }}&suffix=tar.gz" -O GeoLite2-Country.tar.gz
+          tar -xzf GeoLite2-ASN.tar.gz
+          tar -xzf GeoLite2-City.tar.gz
+          tar -xzf GeoLite2-Country.tar.gz
+          mv GeoLite2-ASN*/GeoLite2-ASN.mmdb .
+          mv GeoLite2-City*/GeoLite2-City.mmdb .
+          mv GeoLite2-Country*/GeoLite2-Country.mmdb .
+          rm -rf GeoLite2-*/*.txt GeoLite2-*.tar.gz
+
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "Downloaded file on $(date "+%Y/%m/%d %H:%M:%S")"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{github.repository}}.git
+          git push
